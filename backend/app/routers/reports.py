@@ -69,3 +69,44 @@ async def get_report(session_id: str):
     }).execute()
 
     return stored.data[0]
+
+from fastapi.responses import Response
+from app.utils.excel_exporter import generate_admin_excel_report
+
+@router.get('/reports/{session_id}/export')
+async def export_report_excel(session_id: str):
+    db = get_db()
+    
+    # Needs session metadata
+    session = db.table('exam_sessions').select('*').eq('id', session_id).single().execute()
+    if not session.data:
+        return {"error": "Session not found"}
+        
+    # Gather raw layer events tracking
+    events = db.table('events').select('*').eq('session_id', session_id).execute()
+    l1 = [e for e in events.data if e['layer'] == 'L1']
+    l4 = [e for e in events.data if e['layer'] == 'L4']
+    
+    # Gather Agent-C answers
+    answers = db.table('answer_scores').select('*').eq('session_id', session_id).execute()
+    
+    # Gather Agent-B credibility report
+    report = db.table('credibility_reports').select('*').eq('session_id', session_id).single().execute()
+    
+    # Generate the payload bytes
+    excel_bytes = generate_admin_excel_report(
+        session_details=session.data,
+        events_l1=l1,
+        events_l4=l4,
+        answer_scores=answers.data,
+        credibility_report=report.data if report.data else {}
+    )
+    
+    date_str = session.data.get("start_time", "date").split('T')[0]
+    filename = f"exam_{session_id}_report_{date_str}.xlsx"
+    
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
