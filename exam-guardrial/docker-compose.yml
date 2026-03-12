@@ -1,0 +1,37 @@
+version: '3.8'
+
+# ══════════════════════════════════════════════════════════
+# Exam Guardrail Platform - Docker Compose (Supabase)
+# ══════════════════════════════════════════════════════════
+#
+# This project now uses Supabase for the database.
+# To set up Supabase:
+#
+# 1. Go to https://supabase.com and create a new project
+# 2. Run the SQL schema from schema.sql in your Supabase SQL Editor
+# 3. Get your API URL and API Key from Project Settings
+# 4. Add to your .env.backend file:
+#    SUPABASE_URL=your-project-url
+#    SUPABASE_KEY=your-anon-key
+#
+# For local development with Docker only, you can use:
+# - Frontend: npm run dev (from frontend folder)
+# - Backend: python -m uvicorn backend.main:app --reload
+#
+# ══════════════════════════════════════════════════════════
+
+services:
+  # Optional: Only add if you want PostgreSQL locally (advanced)
+  # Otherwise, use Supabase cloud at https://supabase.com
+  
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_PASSWORD: postgres
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:

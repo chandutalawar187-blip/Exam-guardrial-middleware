@@ -1,0 +1,338 @@
+import uuid
+from datetime import datetime
+import os
+import httpx
+import json
+from fastapi import APIRouter, HTTPException
+from config import settings
+from models import (
+    QuestionPaperCreate,
+    QuestionPaperUpdate,
+    ExamSessionCreate,
+    ExamSessionUpdate,
+    ExamSubmit,
+    AIParams,
+)
+import storage
+
+router = APIRouter(prefix="/api", tags=["exams"])
+
+
+# ══════════════════════════════════════════════════════════
+# QUESTION PAPER ENDPOINTS (Admin)
+# ══════════════════════════════════════════════════════════
+
+@router.post("/exams")
+def create_question_paper(paper: QuestionPaperCreate):
+    """Create a new question paper with MCQ questions"""
+    paper_id = str(uuid.uuid4())[:8]
+    doc = {
+        "_id": paper_id,
+        "title": paper.title,
+        "subject_code": paper.subject_code.upper(),
+        "questions": [q.dict() for q in paper.questions],
+        "question_count": len(paper.questions),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    storage.create_question_paper(doc)
+    return {"message": "Question paper created", "id": paper_id, "subject_code": paper.subject_code.upper()}
+
+
+@router.post("/exams/generate-questions")
+async def generate_questions(params: AIParams):
+    """
+    Calls Anthropic/OpenAI to generate MCQ questions.
+    """
+    api_key = settings.anthropic_api_key
+    
+    if not api_key:
+        print("[SENTINEL WARNING] ANTHROPIC_API_KEY missing. Returning mock questions.")
+        return {
+            "questions": [
+                {
+                    "question_text": f"What is a core concept of {params.topic}?",
+                    "options": ["Option One", "Option Two", "Option Three", "Option Four"],
+                    "correct_option": 0,
+                    "marks": 1
+                } for _ in range(params.count)
+            ]
+        }
+
+    # Structured prompt for AI
+    system_prompt = "You are a professional exam generator. Output ONLY a valid JSON array of objects. No preamble."
+    user_prompt = (f"Generate {params.count} MCQ questions about '{params.topic}' at '{params.difficulty}' difficulty. "
+                   "Each object in the array must have: 'question_text' (string), 'options' (array of exactly 4 strings), 'correct_option' (integer index 0-3 corresponding to the correct option), and 'marks' (integer)."
+                   "The output must be parsable by Python's json.loads().")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                },
+                json={
+                    "model": "claude-3-haiku-20240307",
+                    "max_tokens": 2048,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": user_prompt}]
+                },
+                timeout=30.0
+            )
+            result = resp.json()
+            content = result['content'][0]['text']
+            
+            # Extract JSON array from Claude's response just in case there's backticks
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].strip()
+                
+            questions = json.loads(content)
+            return {"questions": questions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Generation failed: {str(e)}")
+
+
+@router.get("/exams")
+def list_question_papers():
+    """List all question papers"""
+    papers = storage.get_all_question_papers()
+    return {"papers": papers}
+
+
+@router.get("/exams/{paper_id}")
+def get_question_paper(paper_id: str):
+    """Get a specific question paper with all questions"""
+    paper = storage.get_question_paper(paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Question paper not found")
+    return paper
+
+
+@router.put("/exams/{paper_id}")
+def update_question_paper(paper_id: str, update: QuestionPaperUpdate):
+    """Update a question paper"""
+    paper = storage.get_question_paper(paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Question paper not found")
+
+    update_data = {}
+    if update.title is not None:
+        update_data["title"] = update.title
+    if update.subject_code is not None:
+        update_data["subject_code"] = update.subject_code.upper()
+    if update.questions is not None:
+        update_data["questions"] = [q.dict() for q in update.questions]
+        update_data["question_count"] = len(update.questions)
+
+    storage.update_question_paper(paper_id, update_data)
+    return {"message": "Question paper updated"}
+
+
+@router.delete("/exams/{paper_id}")
+def delete_question_paper(paper_id: str):
+    """Delete a question paper"""
+    storage.delete_question_paper(paper_id)
+    return {"message": "Question paper deleted"}
+
+
+# ══════════════════════════════════════════════════════════
+# EXAM SESSION ENDPOINTS (Admin)
+# ══════════════════════════════════════════════════════════
+
+@router.post("/exam-sessions")
+def create_exam_session(session: ExamSessionCreate):
+    """Create a new exam session linked to a question paper via subject code"""
+    # Verify the question paper exists
+    paper = storage.get_paper_by_subject_code(session.subject_code.upper())
+    if not paper:
+        raise HTTPException(status_code=404, detail=f"No question paper found with subject code: {session.subject_code}")
+
+    session_id = "SESSION-" + str(uuid.uuid4())[:6].upper()
+    doc = {
+        "_id": session_id,
+        "subject_code": session.subject_code.upper(),
+        "paper_id": paper["_id"],
+        "title": paper["title"],
+        "start_time": session.start_time,
+        "end_time": session.end_time,
+        "duration_minutes": session.duration_minutes,
+        "is_active": True,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    storage.create_exam_session(doc)
+    return {"message": "Exam session created", "session_id": session_id, "subject_code": session.subject_code.upper()}
+
+
+@router.get("/exam-sessions")
+def list_exam_sessions():
+    """List all exam sessions"""
+    sessions = storage.get_all_exam_sessions()
+    return {"sessions": sessions}
+
+
+@router.get("/exam-sessions/{session_id}")
+def get_exam_session(session_id: str):
+    """Get a specific exam session"""
+    session = storage.get_exam_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+@router.put("/exam-sessions/{session_id}")
+def update_exam_session(session_id: str, update: ExamSessionUpdate):
+    """Update exam session timing or status"""
+    session = storage.get_exam_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    update_data = {}
+    if update.start_time is not None:
+        update_data["start_time"] = update.start_time
+    if update.end_time is not None:
+        update_data["end_time"] = update.end_time
+    if update.duration_minutes is not None:
+        update_data["duration_minutes"] = update.duration_minutes
+    if update.is_active is not None:
+        update_data["is_active"] = update.is_active
+
+    storage.update_exam_session(session_id, update_data)
+    return {"message": "Session updated"}
+
+
+# ══════════════════════════════════════════════════════════
+# STUDENT EXAM ENDPOINTS
+# ══════════════════════════════════════════════════════════
+
+@router.get("/exam-sessions/{session_id}/exam")
+def get_exam_for_student(session_id: str):
+    """Get exam questions for a student (without correct answers)"""
+    session = storage.get_exam_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if not session.get("is_active", False):
+        raise HTTPException(status_code=400, detail="This session is not active")
+
+    paper = storage.get_paper_by_subject_code(session["subject_code"])
+    if not paper:
+        raise HTTPException(status_code=404, detail="Question paper not found")
+
+    # Strip correct answers
+    questions_safe = []
+    for i, q in enumerate(paper.get("questions", [])):
+        questions_safe.append({
+            "index": i,
+            "question_text": q["question_text"],
+            "options": q["options"],
+        })
+
+    return {
+        "session_id": session_id,
+        "title": paper["title"],
+        "subject_code": paper["subject_code"],
+        "duration_minutes": session["duration_minutes"],
+        "question_count": len(questions_safe),
+        "questions": questions_safe,
+    }
+
+
+@router.post("/exam-sessions/{session_id}/submit")
+def submit_exam(session_id: str, submission: ExamSubmit, student_name: str = "", marks_deducted: int = 0):
+    """Submit exam answers and compute score"""
+    session = storage.get_exam_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    paper = storage.get_paper_by_subject_code(session["subject_code"])
+    if not paper:
+        raise HTTPException(status_code=404, detail="Question paper not found")
+
+    # Score the exam
+    questions = paper.get("questions", [])
+    total = len(questions)
+    correct = 0
+    results = []
+
+    for idx_str, selected in submission.answers.items():
+        idx = int(idx_str)
+        if 0 <= idx < total:
+            is_correct = questions[idx]["correct_option"] == selected
+            if is_correct:
+                correct += 1
+            results.append({
+                "question_index": idx,
+                "selected": selected,
+                "correct": questions[idx]["correct_option"],
+                "is_correct": is_correct,
+            })
+
+    base_score = round((correct / total) * 100) if total > 0 else 0
+    # Deduct marks for cheating violations
+    final_score = max(0, base_score - marks_deducted)
+
+    # Save submission - include all calculated values in metadata for reference
+    submission_doc = {
+        "session_id": session_id,
+        "student_name": student_name,
+        "answers": submission.answers,
+        "score": final_score,
+        "correct_count": correct,
+        "total_questions": total,
+        "results": results,
+        "submitted_at": datetime.utcnow().isoformat(),
+        "submitted": True,
+    }
+    
+    # Note: base_score and marks_deducted are tracked but not saved to DB yet
+    # They will be added to the response for frontend display
+    storage.save_submission(submission_doc)
+
+    # Complete the monitoring session
+    monitoring_id = f"{session_id}_{student_name.replace(' ', '_')}"
+    try:
+        storage.update_session_status(monitoring_id, "completed")
+    except Exception:
+        pass
+
+    return {
+        "message": "Exam submitted",
+        "score": final_score,
+        "base_score": base_score,
+        "marks_deducted": marks_deducted,
+        "correct": correct,
+        "total": total,
+        "results": results,
+    }
+
+
+@router.get("/exam-sessions/{session_id}/submissions")
+def get_session_submissions(session_id: str):
+    """Get all submissions for a session (admin)"""
+    submissions = storage.get_session_submissions(session_id)
+    return {"submissions": submissions}
+
+
+# Admin stats
+@router.get("/admin/stats")
+def get_admin_stats():
+    """Get admin dashboard statistics"""
+    papers = storage.get_all_question_papers()
+    sessions = storage.get_all_exam_sessions()
+    all_monitoring = storage.get_all_sessions()
+    all_submissions = storage.get_all_submissions()
+
+    active_sessions = [s for s in sessions if s.get("is_active")]
+    total_students = len(set(sub.get("student_name", "") for sub in all_submissions))
+
+    return {
+        "total_papers": len(papers),
+        "total_sessions": len(sessions),
+        "active_sessions": len(active_sessions),
+        "total_students": total_students,
+        "total_submissions": len(all_submissions),
+        "monitoring_sessions": len(all_monitoring),
+    }
