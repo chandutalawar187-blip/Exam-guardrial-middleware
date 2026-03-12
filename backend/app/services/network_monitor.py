@@ -1,5 +1,3 @@
-# services/network_monitor.py
-
 import psutil
 import socket
 
@@ -13,12 +11,18 @@ AI_API_DOMAINS = [
     'api.perplexity.ai',
 ]
 
+# Pre-resolve domains to IPs to avoid slow reverse lookups
+KNOWN_IPS = {}
+for d in AI_API_DOMAINS:
+    try:
+        ip = socket.gethostbyname(d)
+        KNOWN_IPS[ip] = d
+    except Exception:
+        pass
 
 def resolve_to_domains(ip: str) -> str:
-    try:
-        return socket.gethostbyaddr(ip)[0]
-    except Exception:
-        return ip
+    """Helper to resolve IP to domain for AI API detection."""
+    return KNOWN_IPS.get(ip, "unknown")
 
 
 def scan_ai_connections() -> list:
@@ -39,6 +43,7 @@ def scan_ai_connections() -> list:
                     try:
                         proc = psutil.Process(conn.pid)
                         findings.append({
+                            'layer': 'L3',
                             'event_type': 'AI_API_CALL',
                             'severity': 'CRITICAL',
                             'score_delta': -35,

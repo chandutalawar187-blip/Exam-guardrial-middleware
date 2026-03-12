@@ -13,6 +13,7 @@ class BehavioralEvent(BaseModel):
     platform: str         # windows | macos | android | ios | chromeos
     device_type: str      # laptop | tablet | phone
     metadata: Optional[Dict[str, Any]] = {}
+    layer: Optional[str] = "L1" # L1 | L2 | L3 | L4
     timestamp: Optional[datetime] = None
 
 

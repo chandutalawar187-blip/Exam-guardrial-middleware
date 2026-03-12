@@ -4,6 +4,7 @@ import asyncio
 import httpx
 import platform
 import sys
+import datetime
 from pathlib import Path
 
 # Add backend services to path for shared scanners
@@ -47,24 +48,36 @@ async def agent_loop(session_id: str, token: str):
 
     async with httpx.AsyncClient() as client:
         while True:
-            findings = []
-            findings += scan_windows()
-            findings += scan_ai_connections()
-            findings += scan_processes()
+            findings_l2 = scan_windows()
+            findings_l3 = scan_ai_connections()
+            findings_l4 = scan_processes()
 
-            for finding in findings:
-                await post_event(client, session_id, token, finding)
-                print(f'[DETECTION] {finding["event_type"]} | {finding["severity"]}')
+            # Ensure layer is set and post
+            for f in findings_l2:
+                f['layer'] = 'L2'
+                await post_event(client, session_id, token, f)
+            
+            for f in findings_l3:
+                f['layer'] = 'L3'
+                await post_event(client, session_id, token, f)
+                
+            for f in findings_l4:
+                f['layer'] = 'L4'
+                await post_event(client, session_id, token, f)
 
             # Heartbeat
-            await client.post(
-                f'{API_BASE}/native-agent/heartbeat',
-                json={
-                    'session_id': session_id,
-                    'platform': platform.system()
-                },
-                headers={'Authorization': f'Bearer {token}'}
-            )
+            try:
+                await client.post(
+                    f'{API_BASE}/native-agent/heartbeat',
+                    json={
+                        'session_id': session_id,
+                        'platform': platform.system(),
+                        'timestamp': datetime.datetime.utcnow().isoformat()
+                    },
+                    headers={'Authorization': f'Bearer {token}'}
+                )
+            except Exception:
+                pass
 
             await asyncio.sleep(SCAN_INTERVAL)
 

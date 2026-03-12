@@ -1,4 +1,3 @@
-// dashboard/src/App.jsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,6 +14,10 @@ import ExamSubmittedPage from './pages/student/ExamSubmittedPage';
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRole = null }) => {
   const { auth } = useAuth();
+  
+  // Loading state handling if auth isn't initialized yet
+  if (auth === undefined) return null; 
+
   if (!auth.isAuthenticated) return <Navigate to="/" replace />;
   if (allowedRole && auth.role !== allowedRole) return <Navigate to="/" replace />;
   return children;
@@ -22,36 +25,38 @@ const ProtectedRoute = ({ children, allowedRole = null }) => {
 
 function AppRouter() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        
-        {/* Admin Routes */}
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>
-        } />
-        <Route path="/admin/create-exam" element={
-          <ProtectedRoute allowedRole="admin"><CreateExamPage /></ProtectedRoute>
-        } />
-        <Route path="/admin/reports" element={
-          <ProtectedRoute allowedRole="admin"><AdminReportsPage /></ProtectedRoute>
-        } />
+    <div className="bg-[#020617] min-h-screen text-slate-100 selection:bg-blue-500/30 font-sans">
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>
+          } />
+          <Route path="/admin/create-exam" element={
+            <ProtectedRoute allowedRole="admin"><CreateExamPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/reports" element={
+            <ProtectedRoute allowedRole="admin"><AdminReportsPage /></ProtectedRoute>
+          } />
 
-        {/* Student Routes */}
-        <Route path="/exam/waiting" element={
-          <ProtectedRoute allowedRole="student"><StudentWaitingRoom /></ProtectedRoute>
-        } />
-        <Route path="/exam/room" element={
-          <ProtectedRoute allowedRole="student"><ExamRoomPage /></ProtectedRoute>
-        } />
-        <Route path="/exam/submitted" element={
-          <ProtectedRoute allowedRole="student"><ExamSubmittedPage /></ProtectedRoute>
-        } />
+          {/* Student Routes */}
+          <Route path="/exam/waiting" element={
+            <ProtectedRoute allowedRole="student"><StudentWaitingRoom /></ProtectedRoute>
+          } />
+          <Route path="/exam/room" element={
+            <ProtectedRoute allowedRole="student"><ExamRoomPage /></ProtectedRoute>
+          } />
+          <Route path="/exam/submitted" element={
+            <ProtectedRoute allowedRole="student"><ExamSubmittedPage /></ProtectedRoute>
+          } />
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </div>
   );
 }
 

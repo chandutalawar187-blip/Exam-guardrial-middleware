@@ -90,13 +90,10 @@ def scan_processes():
             # ── Check REMOTE ACCESS apps ──
             if name in REMOTE_ACCESS_APPS:
                 finding = {
-                    'type': 'VIOLATION',
-                    'violationType': 'REMOTE_ACCESS',
+                    'layer': 'L4',
                     'event_type': 'REMOTE_ACCESS_DETECTED',
                     'severity': 'CRITICAL',
                     'score_delta': -50,
-                    'processName': name,
-                    'pid': pid,
                     'metadata': {
                         'process': name,
                         'reason': REMOTE_ACCESS_APPS[name],
@@ -107,23 +104,13 @@ def scan_processes():
                 }
                 findings.append(finding)
 
-                # POST to backend immediately
-                try:
-                    resp = requests.post(BACKEND_URL, json=finding, timeout=5)
-                    print(f'[CRITICAL] Remote access detected: {name} (PID {pid}) — reported ({resp.status_code})')
-                except requests.exceptions.RequestException as e:
-                    print(f'[CRITICAL] Remote access detected: {name} (PID {pid}) — API offline ({e})')
-
             # ── Check SCREEN SHARE apps ──
             elif name in SCREEN_SHARE_APPS:
                 finding = {
-                    'type': 'VIOLATION',
-                    'violationType': 'SCREEN_SHARE',
+                    'layer': 'L4',
                     'event_type': 'SCREEN_SHARE_DETECTED',
                     'severity': 'CRITICAL',
                     'score_delta': -50,
-                    'processName': name,
-                    'pid': pid,
                     'metadata': {
                         'process': name,
                         'reason': SCREEN_SHARE_APPS[name],
@@ -134,22 +121,13 @@ def scan_processes():
                 }
                 findings.append(finding)
 
-                try:
-                    resp = requests.post(BACKEND_URL, json=finding, timeout=5)
-                    print(f'[CRITICAL] Screen share detected: {name} (PID {pid}) — reported ({resp.status_code})')
-                except requests.exceptions.RequestException as e:
-                    print(f'[CRITICAL] Screen share detected: {name} (PID {pid}) — API offline ({e})')
-
             # ── Check AI OVERLAY / SUSPICIOUS apps ──
             elif name in SUSPICIOUS_PROCESSES:
                 finding = {
-                    'type': 'VIOLATION',
-                    'violationType': 'SUSPICIOUS_PROCESS',
+                    'layer': 'L4',
                     'event_type': 'SUSPICIOUS_PROCESS',
                     'severity': 'HIGH',
                     'score_delta': -25,
-                    'processName': name,
-                    'pid': pid,
                     'metadata': {
                         'process': name,
                         'reason': SUSPICIOUS_PROCESSES[name]
@@ -159,22 +137,13 @@ def scan_processes():
                 }
                 findings.append(finding)
 
-                try:
-                    resp = requests.post(BACKEND_URL, json=finding, timeout=5)
-                    print(f'[HIGH] Suspicious process: {name} (PID {pid}) — reported ({resp.status_code})')
-                except requests.exceptions.RequestException as e:
-                    print(f'[HIGH] Suspicious process: {name} (PID {pid}) — API offline ({e})')
-
             # ── Check NON-STANDARD install paths ──
             elif any(p in exe for p in NON_STANDARD_PATHS):
                 finding = {
-                    'type': 'VIOLATION',
-                    'violationType': 'NON_STANDARD_INSTALL',
+                    'layer': 'L4',
                     'event_type': 'NON_STANDARD_INSTALL',
                     'severity': 'MEDIUM',
                     'score_delta': -10,
-                    'processName': name,
-                    'pid': pid,
                     'metadata': {
                         'process': name,
                         'path': exe
@@ -184,22 +153,13 @@ def scan_processes():
                 }
                 findings.append(finding)
 
-                try:
-                    resp = requests.post(BACKEND_URL, json=finding, timeout=5)
-                    print(f'[MEDIUM] Non-standard path: {name} at {exe} — reported ({resp.status_code})')
-                except requests.exceptions.RequestException as e:
-                    print(f'[MEDIUM] Non-standard path: {name} — API offline ({e})')
-
             # ── CPU spike anomaly ──
             elif cpu > 80:
                 finding = {
-                    'type': 'VIOLATION',
-                    'violationType': 'CPU_SPIKE_ANOMALY',
+                    'layer': 'L4',
                     'event_type': 'CPU_SPIKE_ANOMALY',
                     'severity': 'MEDIUM',
                     'score_delta': -15,
-                    'processName': name,
-                    'pid': pid,
                     'metadata': {
                         'process': name,
                         'cpu_percent': cpu

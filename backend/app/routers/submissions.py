@@ -6,7 +6,55 @@ from pydantic import BaseModel
 from typing import Dict, Any
 import datetime
 
+from app.services.claude_analyzer import score_answer_naturalness
+from app.db.supabase_client import get_db
+
 router = APIRouter()
+
+class AnswerSubmission(BaseModel):
+    session_id: str
+    candidate_id: str
+    question_id: str
+    question_text: str
+    student_answer: str
+    time_to_answer_seconds: int
+
+@router.post("/answers")
+async def submit_single_answer(data: AnswerSubmission):
+    """
+    Fires on every answer submission. Triggers AGENT-C.
+    """
+    db = get_db()
+    
+    # 1. Store the answer
+    db.table('answers').insert({
+        'session_id': data.session_id,
+        'question_id': data.question_id,
+        'answer_text': data.student_answer,
+        'time_taken': data.time_to_answer_seconds
+    }).execute()
+
+    # 2. Score via AGENT-C
+    scoring_result = await score_answer_naturalness(
+        session_id=data.session_id,
+        candidate_id=data.candidate_id,
+        question_id=data.question_id,
+        question_text=data.question_text,
+        student_answer=data.student_answer,
+        time_to_answer_seconds=data.time_to_answer_seconds
+    )
+
+    # 3. Store the score in Supabase
+    db.table('answer_scores').insert({
+        'session_id': data.session_id,
+        'question_id': data.question_id,
+        'ai_probability': scoring_result.get('ai_probability', 0.0),
+        'verdict': scoring_result.get('verdict', 'Human'),
+        'flag_for_review': scoring_result.get('flag_for_review', False),
+        'signals_detected': scoring_result.get('signals_detected', [])
+    }).execute()
+
+    return {"success": True, "verdict": scoring_result.get('verdict')}
 
 class Submission(BaseModel):
     studentUid: str
@@ -15,32 +63,16 @@ class Submission(BaseModel):
 
 @router.post("/student/exam/submit")
 async def submit_exam(data: Submission):
-    # Mock grading logic
-    # In reality: Compare data.answers with stored questions in DB
-    raw_score = 10 # Example
+    # This is the final submission
+    db = get_db()
     
-    # Mock violation check (Fetch violations from DB/Cache for this session)
-    total_violations = 4 # Example
+    # Update session status
+    db.table('exam_sessions').update({
+        'status': 'SUBMITTED',
+        'submitted_at': datetime.datetime.now().isoformat()
+    }).eq('id', data.sessionId).execute()
     
-    # Violation Deductions logic: Start after 3 violations, -1 mark per breach
-    violation_deductions = 0
-    if total_violations > 3:
-        violation_deductions = total_violations - 3
-    
-    final_score = max(0, ((raw_score - violation_deductions) / 10) * 100) # Percentage
-
-    report = {
-        "student_uid": data.studentUid,
-        "sessionId": data.sessionId,
-        "raw_score": raw_score,
-        "total_violations": total_violations,
-        "violation_deductions": violation_deductions,
-        "final_score": final_score,
-        "ai_overlay_status": "CLEAN", # This would be updated by the AI subagent
-        "submitted_at": datetime.datetime.now().isoformat()
-    }
-    
-    return {"success": True, "report": report}
+    return {"success": True}
 
 @router.get("/exams/{exam_id}/reports")
 async def get_all_reports(exam_id: str):

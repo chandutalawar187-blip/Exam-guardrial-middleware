@@ -33,6 +33,7 @@ def scan_hidden_windows() -> list:
             proc_name = get_process_name(pid.value)
 
             findings.append({
+                'layer': 'L2',
                 'event_type': 'HIDDEN_WINDOW_WDA',
                 'severity': 'CRITICAL',
                 'score_delta': -40,
