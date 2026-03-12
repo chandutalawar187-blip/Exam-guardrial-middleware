@@ -2,11 +2,8 @@ fastapi
 uvicorn[standard]
 websockets
 python-dotenv
-anthropic
 supabase
 psutil
 scikit-learn
-weasyprint
 httpx
-pyinstaller
 pydantic-settings

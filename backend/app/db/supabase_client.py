@@ -1,13 +1,14 @@
-# backend/app/db/supabase_client.py
-
 from supabase import create_client, Client
-from app.config import settings
+import os
 
 _client: Client = None
-
 
 def get_db() -> Client:
     global _client
     if _client is None:
-        _client = create_client(settings.supabase_url, settings.supabase_key)
+        url = os.getenv('SUPABASE_URL', '')
+        key = os.getenv('SUPABASE_KEY', '')
+        if not url or not key:
+            raise Exception('SUPABASE_URL and SUPABASE_KEY must be set in .env')
+        _client = create_client(url, key)
     return _client
