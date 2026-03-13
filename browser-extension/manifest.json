@@ -1,37 +1,48 @@
 {
   "manifest_version": 3,
   "name": "ExamGuardrail Sentinel",
-  "version": "1.0.0",
-  "description": "Exam integrity monitoring frontend",
+  "version": "3.0.0",
+  "description": "Exam integrity monitoring — Self-contained proctoring sentinel",
+
   "permissions": [
+    "scripting",
     "tabs",
-    "activeTab",
+    "windows",
     "storage",
-    "clipboardRead",
-    "scripting"
+    "activeTab",
+    "webNavigation"
   ],
+
   "host_permissions": [
     "<all_urls>",
-    "file:///*"
+    "http://localhost:5173/*",
+    "http://localhost:3000/*"
   ],
+
   "background": {
     "service_worker": "background.js"
   },
+
   "content_scripts": [
     {
       "matches": [
-        "*://*/exam/*",
         "http://localhost:5173/*",
-        "file:///*"
+        "http://localhost:3000/*"
       ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_start"
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ExamGuardrail Active"
+    "default_title": "ExamGuardrail Sentinel"
   }
-}
+}

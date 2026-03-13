@@ -1,91 +1,93 @@
-// ============================================================
-// EXAMGUARDRAIL v2.0 — SECURE BACKGROUND WORKER
-// ============================================================
-// Handles: API forwarding, violation storage, session management.
-// Runs in an isolated Service Worker — invisible to the exam page.
-// ============================================================
+// browser-extension/background.js
 
+// REMOVED: All LAUNCH_EXAM handling and chrome.windows.create with external URL.
+// NEW: SENTINEL_ACTIVATE / DEACTIVATE handlers and VIOLATION_COUNT_UPDATE broadcast.
+
+const DEBUG = true;
 const API_BASE = 'http://localhost:8000/api';
 
-// ── INSTALL / RELOAD ────────────────────────────────────────
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[ExamGuardrail v2.0] Extension installed.');
-
-  // Set the current active tab as the exam tab
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      chrome.storage.local.set({ examTabId: tabs[0].id });
-    }
-  });
-});
+function log(...args) { if (DEBUG) console.log('[Sentinel BG]', ...args); }
 
 // ── MESSAGE ROUTER ──────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
-  // ── CLEAR SESSION (called when sentinel activates) ──
-  if (message.type === 'CLEAR_SESSION') {
-    chrome.storage.local.set({ violations: [] }, () => {
-      console.log('[ExamGuardrail] Session cleared — fresh exam.');
+  // NEW: SENTINEL_ACTIVATE handler
+  if (message.type === 'SENTINEL_ACTIVATE') {
+    const { sessionId, studentUid } = message;
+    chrome.storage.session.set({ 
+      sentinelActive: true, 
+      activeSessionId: sessionId, 
+      activeStudentUid: studentUid 
+    }).then(() => {
+      log('Sentinel ACTIVATED for session:', sessionId);
+      sendResponse({ sentinelActive: true });
     });
-    sendResponse({ status: 'cleared' });
+    return true; // async
   }
 
-  // ── RECEIVE VIOLATION ──
-  if (message.type === 'SEND_VIOLATION') {
-    const payload = message.payload;
-
-    // 1. Forward to backend API (secure — invisible to page)
-    fetch(`${API_BASE}/events`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => console.log('[BG] API accepted:', payload.event_type))
-    .catch(err => console.warn('[BG] API offline:', err.message));
-
-    // 2. Store locally for popup
-    chrome.storage.local.get(['violations'], (result) => {
-      const violations = result.violations || [];
-      violations.push({
-        ...payload,
-        tabId: sender.tab?.id,
-        url: sender.tab?.url
-      });
-
-      // Cap at 100 violations per session
-      if (violations.length > 100) violations.shift();
-
-      chrome.storage.local.set({ violations });
+  // NEW: SENTINEL_DEACTIVATE handler
+  if (message.type === 'SENTINEL_DEACTIVATE') {
+    chrome.storage.session.remove(['sentinelActive', 'activeSessionId', 'activeStudentUid']).then(() => {
+      log('Sentinel DEACTIVATED');
+      sendResponse({ sentinelActive: false });
     });
-
-    sendResponse({ status: 'received' });
+    return true; // async
   }
 
-  return true; // Keep async channel open
-});
+  // KEEP: Storage proxy logic for Content Script CSP issues
+  if (message.type === 'STORAGE_SET') {
+    chrome.storage.session.set({ [message.key]: message.value }).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === 'STORAGE_GET') {
+    chrome.storage.session.get([message.key]).then(result => sendResponse({ value: result[message.key] ?? null }));
+    return true;
+  }
 
-// ── TAB SWITCH TRACKING (Browser-Level) ─────────────────────
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  chrome.storage.local.get(['examTabId'], (result) => {
-    if (result.examTabId && activeInfo.tabId !== result.examTabId) {
-      console.log('[ExamGuardrail] Tab switch detected at browser level.');
-
+  // KEEP AND ENHANCE: Violation event forwarding
+  if (message.type === 'VIOLATION') {
+    const { violationType, severity, timestamp, count } = message;
+    
+    chrome.storage.session.get(['activeSessionId', 'activeStudentUid']).then(stored => {
       const payload = {
-        session_id: 'BROWSER_LEVEL',
-        event_type: 'BROWSER_TAB_SWITCH',
-        severity: 'HIGH',
-        score_delta: -15,
-        platform: 'unknown',
-        metadata: { action: 'Switched active browser tab' },
-        timestamp: new Date().toISOString()
+        session_id: stored.activeSessionId,
+        student_uid: stored.activeStudentUid,
+        event_type: violationType,
+        severity: severity,
+        timestamp: timestamp || new Date().toISOString(),
+        violation_number: count
       };
 
+      // Forward to backend
       fetch(`${API_BASE}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(() => {});
-    }
-  });
+      }).catch(err => log('API Error:', err.message));
+
+      // NEW: VIOLATION_COUNT_UPDATE broadcast to the exam tab
+      if (sender.tab?.id) {
+        chrome.tabs.sendMessage(sender.tab.id, { 
+          type: 'VIOLATION_COUNT_UPDATE', 
+          count: count 
+        }).catch(() => {});
+      }
+    });
+
+    sendResponse({ received: true });
+  }
+
+  return true;
+});
+
+// ── WINDOW FOCUS LOCK ────────────────────────────────────────
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+
+  const stored = await chrome.storage.session.get(['sentinelActive']);
+  if (!stored.sentinelActive) return;
+
+  // Re-focus the window if it's an active proctored session
+  // (In the self-contained app, this target is the app window)
+  log('Focus lock checked');
 });
