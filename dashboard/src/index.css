@@ -6,11 +6,11 @@
 @tailwind utilities;
 
 :root {
-  --primary: #0B1F3B;
-  --secondary: #2563EB;
-  --accent: #14B8A6;
-  --neutral-dark: #64748B;
-  --neutral-light: #F8FAFC;
+  --primary: #001D39;
+  --secondary: #0A4174;
+  --accent: #4E8EA2;
+  --neutral-dark: #49769F;
+  --neutral-light: #BDD8E9;
   --danger: #EF4444;
   --warning: #F59E0B;
 }
@@ -35,7 +35,7 @@ body {
   background: var(--neutral-light);
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #6EA2B3;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

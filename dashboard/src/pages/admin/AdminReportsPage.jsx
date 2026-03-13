@@ -67,33 +67,33 @@ export default function AdminReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-       <nav className="bg-[#0B1F3B] text-white px-8 h-16 flex items-center justify-between shadow-lg">
+    <div className="min-h-screen bg-[#BDD8E9]">
+       <nav className="bg-[#001D39] text-white px-8 h-16 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-12">
           <img src={logoLight} alt="Cognivigil" className="h-6" />
-          <h1 className="text-sm font-bold uppercase tracking-widest text-[#14B8A6]">Admin Reports</h1>
+          <h1 className="font-body text-[14px] font-display font-bold uppercase tracking-widest text-[#4E8EA2]">Admin Reports</h1>
         </div>
-        <button onClick={() => navigate('/admin/dashboard')} className="text-xs font-bold text-[#64748B] hover:text-white">BACK TO DASHBOARD</button>
+        <button onClick={() => navigate('/admin/dashboard')} className="font-body text-[12px] font-display font-bold text-[#49769F] hover:text-white">BACK TO DASHBOARD</button>
       </nav>
 
       <main className="p-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#0B1F3B]">Violation Audit Reports</h1>
-            <p className="text-[#64748B] text-sm mt-1">Export detailed forensic analysis of student sessions to Microsoft Excel.</p>
+            <h1 className="text-2xl font-display font-bold text-[#001D39]">Violation Audit Reports</h1>
+            <p className="text-[#49769F] font-body text-[14px] mt-1">Export detailed forensic analysis of student sessions to Microsoft Excel.</p>
           </div>
           <button 
             onClick={exportToExcel}
-            className="flex items-center gap-2 bg-[#14B8A6] text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-[#14B8A6]/20 hover:scale-105 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-[#4E8EA2] text-white px-6 py-3 rounded-xl font-black font-body text-[14px] shadow-lg shadow-[#4E8EA2]/20 hover:scale-105 active:scale-95 transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Download Violation Report (Excel)
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#7BBDE8] shadow-sm overflow-hidden">
            <table className="w-full text-left">
-              <thead className="bg-[#F8FAFC] text-[11px] uppercase tracking-widest font-black text-[#64748B] border-b border-[#E2E8F0]">
+              <thead className="bg-[#BDD8E9] font-body text-[12px] uppercase tracking-widest font-black text-[#49769F] border-b border-[#7BBDE8]">
                 <tr>
                   <th className="px-8 py-5">Student UID</th>
                   <th className="px-8 py-5">Raw Score</th>
@@ -103,27 +103,27 @@ export default function AdminReportsPage() {
                   <th className="px-8 py-5 text-right">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E8F0]">
+              <tbody className="divide-y divide-[#7BBDE8]">
                 {isLoading ? (
-                  <tr><td colSpan="6" className="px-8 py-20 text-center text-[#94A3B8] font-bold">Loading analytical data...</td></tr>
+                  <tr><td colSpan="6" className="px-8 py-20 text-center text-[#6EA2B3] font-display font-bold">Loading analytical data...</td></tr>
                 ) : (
                   reports.map((r, i) => (
-                    <tr key={i} className={`hover:bg-[#F8FAFC] transition-colors ${r.total_violations >= 3 ? 'bg-[#FEF2F2]' : r.total_violations > 0 ? 'bg-[#FFFBEB]' : ''}`}>
-                      <td className="px-8 py-5 font-mono text-xs font-bold text-[#0B1F3B]">{r.student_uid}</td>
-                      <td className="px-8 py-5 text-sm font-medium">{r.raw_score} marks</td>
+                    <tr key={i} className={`hover:bg-[#BDD8E9] transition-colors ${r.total_violations >= 3 ? 'bg-[#FEF2F2]' : r.total_violations > 0 ? 'bg-[#FFFBEB]' : ''}`}>
+                      <td className="px-8 py-5 font-mono font-body text-[12px] font-display font-bold text-[#001D39]">{r.student_uid}</td>
+                      <td className="px-8 py-5 font-body text-[14px] font-body font-normal">{r.raw_score} marks</td>
                       <td className="px-8 py-5">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.total_violations >= 3 ? 'bg-[#EF4444] text-white' : 'bg-[#F1F5F9] text-[#64748B]'}`}>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${r.total_violations >= 3 ? 'bg-[#EF4444] text-white' : 'bg-[#BDD8E9] text-[#49769F]'}`}>
                           {r.total_violations} Breaches
                         </span>
                       </td>
                       <td className="px-8 py-5">
-                        <span className={`flex items-center gap-2 text-[10px] font-black uppercase ${r.ai_overlay_status === 'CONFIRMED' ? 'text-[#EF4444]' : 'text-[#14B8A6]'}`}>
-                           <span className={`w-2 h-2 rounded-full ${r.ai_overlay_status === 'CONFIRMED' ? 'bg-[#EF4444]' : 'bg-[#14B8A6]'}`}></span>
+                        <span className={`flex items-center gap-2 text-[10px] font-black uppercase ${r.ai_overlay_status === 'CONFIRMED' ? 'text-[#EF4444]' : 'text-[#4E8EA2]'}`}>
+                           <span className={`w-2 h-2 rounded-full ${r.ai_overlay_status === 'CONFIRMED' ? 'bg-[#EF4444]' : 'bg-[#4E8EA2]'}`}></span>
                            {r.ai_overlay_status}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-lg font-black text-[#0B1F3B]">{r.final_score}%</td>
-                      <td className="px-8 py-5 text-right"><button className="text-[#2563EB] font-bold text-xs hover:underline">View Forensic Log</button></td>
+                      <td className="px-8 py-5 font-display text-[18px] font-black text-[#001D39]">{r.final_score}%</td>
+                      <td className="px-8 py-5 text-right"><button className="text-[#0A4174] font-display font-bold font-body text-[12px] hover:underline">View Forensic Log</button></td>
                     </tr>
                   ))
                 )}

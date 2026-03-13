@@ -27,11 +27,11 @@ function updateBanner(active) {
     <style>
       .banner {
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        padding: 8px 16px; background: #0B1F3B; border-bottom: 2px solid #14B8A6;
-        color: #14B8A6; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 700;
+        padding: 8px 16px; background: #001D39; border-bottom: 2px solid #4E8EA2;
+        color: #4E8EA2; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 700;
         letter-spacing: 0.05em; text-transform: uppercase;
       }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: #14B8A6; animation: blink 1s infinite; box-shadow: 0 0 8px #14B8A6; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #4E8EA2; animation: blink 1s infinite; box-shadow: 0 0 8px #4E8EA2; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
     <div class="banner">
