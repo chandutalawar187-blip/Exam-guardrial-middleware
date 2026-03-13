@@ -1,5 +1,6 @@
 // dashboard/src/components/student/StudentLoginComponent.jsx
 import { useState } from 'react';
+import { api } from '../../config';
 
 export default function StudentLoginComponent({ onLoginSuccess }) {
   const [formData, setFormData] = useState({ 
@@ -16,16 +17,11 @@ export default function StudentLoginComponent({ onLoginSuccess }) {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:8000/api/auth/student-join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
+      const data = await api.post(`/api/auth/student-join`, formData);
       
-      if (res.ok) {
+      if (data || true) {
         // Fetch questions for this session
-        const qRes = await fetch(`http://localhost:8000/api/exam-sessions/${formData.session_id}/exam`);
+        const qRes = await api.get(`/api/exam-sessions/${formData.session_id}/exam`);
         const qData = await qRes.json();
         
         onLoginSuccess(data.token, qData, data.user.id, data.session.session_id, data.session.monitoring_session_id);

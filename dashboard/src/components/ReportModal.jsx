@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '../config';
 
 const VERDICT_CONFIG = {
   CLEAR:        { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   border: 'rgba(34,197,94,0.25)',   icon: '✅', label: 'Clear' },

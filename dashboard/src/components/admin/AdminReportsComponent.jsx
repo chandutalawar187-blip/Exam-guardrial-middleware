@@ -1,6 +1,7 @@
 // dashboard/src/components/admin/AdminReportsComponent.jsx
 import { useState, useEffect } from 'react';
 import { Download, RefreshCw, AlertTriangle, ShieldCheck, ChevronRight, Activity, Search } from 'lucide-react';
+import { api } from '../../config';
 
 export default function AdminReportsComponent({ examId = "DEFAULT_EXAM" }) {
   const [reports, setReports] = useState([]);
@@ -13,8 +14,7 @@ export default function AdminReportsComponent({ examId = "DEFAULT_EXAM" }) {
     if (showRefreshSpinnner) setIsRefreshing(true);
     try {
       // Pointing to the correct API endpoint for grabbing exam reports
-      const res = await fetch(`http://localhost:8000/api/exams/${examId}/reports`);
-      const data = await res.json();
+      const data = await api.get(`/api/exams/${examId}/reports`);
       if (data.reports) {
         setReports(data.reports);
       }

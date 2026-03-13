@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 # REST endpoint — from browser extension and PWA
-@router.post('/events')
+@router.post('/api/events')
 async def receive_event(event: BehavioralEvent):
     db = get_db()
     

@@ -35,7 +35,11 @@ CREATE TABLE questions (
 CREATE TABLE exam_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   exam_id UUID REFERENCES exams(id) ON DELETE CASCADE,
-  candidate_id TEXT NOT NULL,
+  candidate_id TEXT,
+  student_id TEXT,
+  student_name TEXT,
+  exam_name TEXT,
+  verdict TEXT,
   status TEXT DEFAULT 'ACTIVE', -- ACTIVE | SUBMITTED | FLAGGED | TERMINATED
   started_at TIMESTAMPTZ DEFAULT NOW(),
   submitted_at TIMESTAMPTZ,
@@ -80,18 +84,20 @@ CREATE TABLE answer_scores (
 );
 
 -- CREDIBILITY REPORTS (Agent B output)
-CREATE TABLE credibility_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID REFERENCES exam_sessions(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS credibility_reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id UUID REFERENCES exam_sessions(id),
+  student_id TEXT NOT NULL,
+  student_name TEXT,
+  exam_name TEXT,
+  verdict TEXT,
   credibility_score INTEGER,
-  verdict TEXT, -- CLEAR | UNDER_REVIEW | SUSPICIOUS | FLAGGED
-  risk_breakdown JSONB DEFAULT '{}',
-  red_flags JSONB DEFAULT '[]',
-  timeline JSONB DEFAULT '[]',
   executive_summary TEXT,
+  policy_violations JSONB DEFAULT '[]',
+  comparable_past_cases TEXT,
   recommendation TEXT,
-  full_report JSONB,
-  generated_at TIMESTAMPTZ DEFAULT NOW()
+  confidence FLOAT,
+  generated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- REALTIME & SECURITY
@@ -110,3 +116,38 @@ CREATE INDEX idx_events_session_layer ON events(session_id, layer);
 CREATE INDEX idx_answers_session ON answers(session_id);
 CREATE INDEX idx_scores_session ON answer_scores(session_id);
 CREATE INDEX idx_exams_code ON exams(join_code);
+
+CREATE TABLE IF NOT EXISTS admin_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+INSERT INTO admin_users (username, password_hash)
+VALUES ('admin', 'admin123')
+ON CONFLICT (username) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS student_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  password TEXT NOT NULL,
+  exam_name TEXT NOT NULL,
+  is_eligible BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE student_users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY admin_all ON student_users FOR ALL USING (true);
+
+CREATE TABLE IF NOT EXISTS exam_questions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  exam_name TEXT NOT NULL,
+  question_text TEXT NOT NULL,
+  options JSONB NOT NULL,
+  correct_answer TEXT,
+  order_index INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE exam_questions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY eligible_students_read ON exam_questions FOR SELECT USING (true);
+

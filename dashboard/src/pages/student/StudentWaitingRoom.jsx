@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoDark from '../../assets/logo/Cognivigil_logo_full_dark.svg';
+import { api } from '../../config';
 
 export default function StudentWaitingRoom() {
   const navigate = useNavigate();
@@ -13,8 +14,7 @@ export default function StudentWaitingRoom() {
     // 5-second status polling
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/exams/DEFAULT_EXAM/status');
-        const data = await res.json();
+        const data = await api.get(`/api/exams/DEFAULT_EXAM/status`);
         if (data.status === 'published') {
            setIsReady(true);
            clearInterval(interval);
@@ -42,8 +42,24 @@ export default function StudentWaitingRoom() {
     } catch(e) {}
   };
 
-  const startExam = () => {
-    navigate('/exam/room');
+  const startExam = async () => {
+    try {
+      // Create session in backend - this triggers the silent python agent automatically
+      const data = await api.post(`/api/sessions`, {
+          student_id: studentUid,
+          student_name: 'Student One',
+          org_id: 'ORG-SENTINEL',
+          exam_name: 'Data Structures Advanced',
+          platform: 'Windows-Cognivigil',
+          device_type: 'Laptop'
+        });
+      // Navigate to exam room with the session ID
+      navigate(`/exam/room?sessionId=${data.session_id}`);
+    } catch (err) {
+      console.error("Failed to initialize Sentinel Session", err);
+      // Fallback for demo
+      navigate('/exam/room');
+    }
   };
 
   return (

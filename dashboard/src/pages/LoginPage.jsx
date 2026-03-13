@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../config';
 import logoDark from '../assets/logo/Cognivigil_logo_full_dark.svg';
 
 export default function LoginPage() {
@@ -20,26 +21,28 @@ export default function LoginPage() {
     setError('');
 
     if (role === 'Admin') {
-      if (uid === 'ADMIN001' && password === 'cognivigil@admin') {
-        login('admin', uid, 'dummy-admin-token');
-        navigate('/admin/dashboard');
-      } else {
-        setError('Invalid Admin credentials.');
+      try {
+        const data = await api.post('/api/auth/admin-login', { username: uid, password })
+        if (data.success) {
+          login('admin', uid, data.token);
+          navigate('/admin/dashboard');
+        } else {
+          setError('Invalid Admin credentials.');
+        }
+      } catch (err) {
+        setError('Connection failed. Please ensure the server is running.');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
       return;
     }
 
     // Student Login
     try {
-      const res = await fetch('http://localhost:8000/api/student/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, password })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        login('student', uid, data.token);
+      const data = await api.post('/api/auth/student-login', { user_id: uid, password })
+      if (data.success) {
+        localStorage.setItem('exam_name', data.exam_name);
+        login('student', uid, data.session_id);
         navigate('/exam/waiting');
       } else {
         setError(data.error || 'Invalid credentials. Please check your Student ID and Password.');
@@ -120,7 +123,7 @@ export default function LoginPage() {
                 type="text" 
                 value={uid}
                 onChange={(e) => setUid(e.target.value)}
-                placeholder={role === 'Student' ? "Enter your unique exam ID" : "ADMIN001"}
+                placeholder={role === 'Student' ? "Enter your unique exam ID" : "124843"}
                 className="w-full border border-[#7BBDE8] rounded-lg px-4 py-3 font-body text-[14px] font-body font-normal focus:border-[#0A4174] focus:ring-2 focus:ring-[#0A4174]/10 outline-none transition-all placeholder:text-[#6EA2B3]"
                 required
               />

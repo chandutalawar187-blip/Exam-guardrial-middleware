@@ -4,6 +4,7 @@ import AlertBanner from '../AlertBanner';
 import EventFeed from '../EventFeed';
 import ReportModal from '../ReportModal';
 import { useState, useEffect } from 'react';
+import { api } from '../../config';
 
 const VERDICT_CONFIG = {
   CLEAR:        { color: '#22c55e', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.25)',  icon: '✅', label: 'Clear' },

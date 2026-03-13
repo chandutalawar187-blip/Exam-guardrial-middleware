@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import CreateExamPage from './pages/admin/CreateExamPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AdminStudentsPage from './pages/admin/AdminStudentsPage';
+import AdminExamsPage from './pages/admin/AdminExamsPage';
 import StudentWaitingRoom from './pages/student/StudentWaitingRoom';
 import ExamRoomPage from './pages/student/ExamRoomPage';
 import ExamSubmittedPage from './pages/student/ExamSubmittedPage';
@@ -25,7 +27,7 @@ const ProtectedRoute = ({ children, allowedRole = null }) => {
 
 function AppRouter() {
   return (
-    <div className="bg-[#020617] min-h-screen text-slate-100 selection:bg-blue-500/30 font-sans">
+    <div className="bg-[#BDD8E9] min-h-screen text-[#001D39] selection:bg-blue-500/30 font-sans">
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LoginPage />} />
@@ -39,6 +41,12 @@ function AppRouter() {
           } />
           <Route path="/admin/reports" element={
             <ProtectedRoute allowedRole="admin"><AdminReportsPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/students" element={
+            <ProtectedRoute allowedRole="admin"><AdminStudentsPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/exams" element={
+            <ProtectedRoute allowedRole="admin"><AdminExamsPage /></ProtectedRoute>
           } />
 
           {/* Student Routes */}

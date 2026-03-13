@@ -1,5 +1,6 @@
 // dashboard/src/components/student/ExamRoomComponent.jsx
 import { useState, useEffect, useCallback } from 'react';
+import { api } from '../../config';
 
 export default function ExamRoomComponent({ examData, studentUid, sessionId, monitoringId, onComplete }) {
   const [sentinelReady, setSentinelReady] = useState(false);
@@ -56,11 +57,7 @@ export default function ExamRoomComponent({ examData, studentUid, sessionId, mon
   const handleSubmit = useCallback(async () => {
     // Note: backend expects { question_index: selected_index }
     // Our 'answers' state stores { question_index: selected_index }
-    const res = await fetch(`http://localhost:8000/api/exam-sessions/${sessionId}/submit?student_name=${encodeURIComponent(studentUid)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers })
-    });
+    const res = await api.post(`/api/exam-sessions/${sessionId}/submit?student_name=${encodeURIComponent(studentUid)}`, { answers });
     const data = await res.json();
     onComplete(data);
   }, [studentUid, answers, sessionId, onComplete]);

@@ -1,6 +1,7 @@
 // dashboard/src/components/admin/CreateExamComponent.jsx
 import { useState } from 'react';
-import { Trash2, Loader2, AlertCircle, PlusCircle } from 'lucide-react'; 
+import { Trash2, Loader2, AlertCircle, PlusCircle } from 'lucide-react';
+import { api } from '../../config'; 
 
 export default function CreateExamComponent() {
   const [examInfo, setExamInfo] = useState({ 
@@ -32,12 +33,7 @@ export default function CreateExamComponent() {
     setIsGenerating(true);
     setValidationError('');
     try {
-      const res = await fetch('http://localhost:8000/api/exams/generate-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiParams)
-      });
-      const data = await res.json();
+      const data = await api.post(`/api/exams/generate-questions`, aiParams);
       if (data.questions) {
         setQuestions([...questions, ...data.questions]);
       } else {
@@ -70,15 +66,11 @@ export default function CreateExamComponent() {
     setIsSaving(true);
     try {
       // 1. Create Question Paper
-      const paperRes = await fetch('http://localhost:8000/api/exams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      const paperRes = await api.post(`/api/exams`, { 
           title: examInfo.title, 
           subject_code: examInfo.subject_code, 
           questions 
-        })
-      });
+        });
       
       if (!paperRes.ok) throw new Error('Failed to create question paper in database.');
       const paperData = await paperRes.json();

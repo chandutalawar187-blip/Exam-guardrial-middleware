@@ -11,3 +11,13 @@ def get_db() -> Client:
     if _client is None:
         _client = create_client(settings.supabase_url, settings.supabase_key)
     return _client
+
+_admin_client: Client = None
+
+def get_supabase_admin() -> Client:
+    global _admin_client
+    if _admin_client is None:
+        # Use simple key if service_key is not set (for demo/fallback)
+        key = settings.supabase_service_key or settings.supabase_key
+        _admin_client = create_client(settings.supabase_url, key)
+    return _admin_client

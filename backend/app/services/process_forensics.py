@@ -59,7 +59,8 @@ SCREEN_SHARE_APPS = {
 # ── AI OVERLAY / CHEAT TOOLS ────────────────────────────────
 # From the original process_forensics.py — known AI overlay apps.
 SUSPICIOUS_PROCESSES = {
-    'cluely_helper.exe':  'Cluely AI overlay app',
+    'cluely.exe':         'Cluely AI overlay app (Main)',
+    'cluely_helper.exe':  'Cluely AI overlay app (Helper)',
     'electron.exe':       'Interview Coder or unknown Electron app',
     'pmodule.exe':        'ParakeetAI hidden overlay',
     'ghost.exe':          'LockedIn AI ghost process',
@@ -126,11 +127,12 @@ def scan_processes():
                 finding = {
                     'layer': 'L4',
                     'event_type': 'SUSPICIOUS_PROCESS',
-                    'severity': 'HIGH',
-                    'score_delta': -25,
+                    'severity': 'CRITICAL',
+                    'score_delta': -40,
                     'metadata': {
                         'process': name,
-                        'reason': SUSPICIOUS_PROCESSES[name]
+                        'reason': SUSPICIOUS_PROCESSES[name],
+                        'pid': pid
                     },
                     'timestamp': datetime.datetime.utcnow().isoformat(),
                     'platform': platform.system()

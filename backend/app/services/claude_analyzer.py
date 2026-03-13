@@ -159,7 +159,29 @@ Generate the Credibility Report in EXACTLY this JSON schema:
         
         raw_text = response.content[0].text
         cleaned_text = clean_json_response(raw_text)
-        return json.loads(cleaned_text)
+        report = json.loads(cleaned_text)
+        
+        try:
+            from ..db.supabase_client import get_supabase_admin
+            supabase = get_supabase_admin()
+            session = session_metadata
+            supabase.table('credibility_reports').insert({
+                'session_id': session.get('id', session.get('session_id')),
+                'student_id': session.get('student_id', session.get('candidate_id')),
+                'student_name': session.get('student_name', 'Unknown'),
+                'exam_name': session.get('exam_name', 'Unknown'),
+                'verdict': report.get('verdict', 'UNDER_REVIEW'),
+                'credibility_score': report.get('credibility_score', 0),
+                'executive_summary': report.get('executive_summary', ''),
+                'policy_violations': report.get('policy_violations', []),
+                'comparable_past_cases': report.get('comparable_past_cases', ''),
+                'recommendation': report.get('recommendation', ''),
+                'confidence': report.get('confidence', 0.0)
+            }).execute()
+        except Exception as db_err:
+            print(f"[Supabase DB Insert Error] {db_err}")
+
+        return report
     except Exception as e:
         print(f"[AGENT-B ERROR] {str(e)}")
         return {"error": str(e), "verdict": "UNDER_REVIEW"}

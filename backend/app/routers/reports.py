@@ -7,7 +7,7 @@ from app.services.claude_analyzer import generate_credibility_report
 router = APIRouter()
 
 
-@router.get('/reports/{session_id}')
+@router.get('/api/reports/{session_id}')
 async def get_report(session_id: str):
     db = get_db()
 
@@ -21,28 +21,24 @@ async def get_report(session_id: str):
         return existing.data[0]
 
     # 2. Collect all data for AGENT-B
-    # Session Metadata
     session = db.table('exam_sessions').select('*').eq('id', session_id).single().execute()
     if not session.data:
         return {"error": "Session not found"}
     
-    # Events grouped by layer
     events_raw = db.table('events').select('*').eq('session_id', session_id).execute()
     l1 = [e for e in events_raw.data if e['layer'] == 'L1']
     l2 = [e for e in events_raw.data if e['layer'] == 'L2']
     l3 = [e for e in events_raw.data if e['layer'] == 'L3']
     l4 = [e for e in events_raw.data if e['layer'] == 'L4']
 
-    # Answer Scores (Agent C)
     answers = db.table('answer_scores').select('*').eq('session_id', session_id).execute()
 
-    # ML Scores (Dummy for now or summarized)
     ml_scores = {
         "anomaly_count": len([e for e in l1 if e['severity'] == 'HIGH']), # Mock
         "total_events": len(events_raw.data)
     }
 
-    # Generate the report
+    # Generate the report (which now saves itself)
     report_json = await generate_credibility_report(
         session_metadata=session.data,
         l1_events={"events": l1},
@@ -50,30 +46,16 @@ async def get_report(session_id: str):
         l3_events={"events": l3},
         l4_events={"events": l4},
         l5_ml_scores=ml_scores,
-        webcam_signals={"look_away_events": 0}, # Mock
+        webcam_signals={"look_away_events": 0},
         answer_naturalness={"scores": answers.data}
     )
 
-    # 3. Store the report
-    stored = db.table('credibility_reports').insert({
-        'session_id': session_id,
-        'credibility_score': report_json.get('credibility_score', 0),
-        'verdict': report_json.get('verdict', 'UNDER_REVIEW'),
-        'risk_breakdown': report_json.get('risk_breakdown', {}),
-        'red_flags': report_json.get('red_flags', []),
-        'timeline': report_json.get('timeline_of_key_events', []),
-        'executive_summary': report_json.get('executive_summary', ''),
-        'recommendation': report_json.get('recommendation', ''),
-        'full_report': report_json,
-        'generated_at': report_json.get('generated_at', '2025-03-14T10:23:44Z')
-    }).execute()
-
-    return stored.data[0]
+    return report_json
 
 from fastapi.responses import Response
 from app.utils.excel_exporter import generate_admin_excel_report
 
-@router.get('/reports/{session_id}/export')
+@router.get('/api/reports/{session_id}/export')
 async def export_report_excel(session_id: str):
     db = get_db()
     
