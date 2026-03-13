@@ -2,22 +2,36 @@
   "manifest_version": 3,
   "name": "ExamGuardrail Sentinel",
   "version": "1.0.0",
-  "description": "Exam integrity monitoring — ExamGuardrail",
+  "description": "Exam integrity monitoring frontend",
   "permissions": [
-    "tabs", "activeTab", "storage",
-    "clipboardRead", "scripting"
+    "tabs",
+    "activeTab",
+    "storage",
+    "clipboardRead",
+    "scripting"
   ],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": [
+    "<all_urls>",
+    "file:///*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [{
-    "matches": ["*://*/exam/*", "http://localhost:5173/*"],
-    "js": ["content.js"],
-    "run_at": "document_start"
-  }],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/exam/*",
+        "http://localhost:5173/*",
+        "file:///*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "ExamGuardrail Active"
   }
-}
+}
