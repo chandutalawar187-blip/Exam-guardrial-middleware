@@ -113,3 +113,25 @@ async def generate_questions(params: AIParams):
             return {"questions": questions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Generation failed: {str(e)}")
+
+@router.get("/exams/{exam_id}/status")
+async def get_exam_status(exam_id: str):
+    return {"status": "published"}
+
+@router.put("/exams/{exam_id}/publish")
+async def publish_exam(exam_id: str):
+    return {"success": True}
+
+@router.post("/exams/{exam_id}/students/generate")
+async def generate_exam_students(exam_id: str, payload: dict):
+    count = payload.get("count", 30)
+    credentials = []
+    for _ in range(count):
+        student_uid = f"COG-ST-{str(uuid.uuid4())[:8].upper()}"
+        plain_password = str(uuid.uuid4())[:8]
+        credentials.append({
+            "student_uid": student_uid,
+            "plain_password": plain_password,
+            "exam_id": exam_id
+        })
+    return {"credentials": credentials}

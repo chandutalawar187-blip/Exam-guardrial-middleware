@@ -26,16 +26,17 @@ function updateBanner(active) {
   shadow.innerHTML = `
     <style>
       .banner {
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-        padding: 6px 16px; background: rgba(220, 38, 38, 0.95);
-        color: white; font-size: 13px; font-family: sans-serif; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 8px 16px; background: #0B1F3B; border-bottom: 2px solid #14B8A6;
+        color: #14B8A6; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 700;
+        letter-spacing: 0.05em; text-transform: uppercase;
       }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: blink 1s infinite; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #14B8A6; animation: blink 1s infinite; box-shadow: 0 0 8px #14B8A6; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
     <div class="banner">
       <div class="dot"></div>
-      🛡 Sentinel Active — This session is being monitored and recorded
+      🛡 Cognivigil Sentinel Active — Integrity Monitored
     </div>
   `;
 }
@@ -43,7 +44,7 @@ function updateBanner(active) {
 // NEW: Input blocker when Sentinel is inactive but on the exam route
 const blocker = document.createElement('div');
 blocker.id = '__sentinel_blocker__';
-blocker.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483646;pointer-events:all;background:rgba(0,0,0,0.1);display:none;cursor:not-allowed;';
+blocker.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483646;pointer-events:all;background:rgba(11,31,59,0.4);backdrop-filter:blur(2px);display:none;cursor:not-allowed;';
 document.body?.appendChild(blocker);
 
 function setSentinelState(active) {

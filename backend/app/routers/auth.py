@@ -13,7 +13,7 @@ class StudentLogin(BaseModel):
 @router.post("/student/login")
 async def student_login(data: StudentLogin):
     # This is a mock: In reality, check DB for students_credentials_table
-    if data.uid.startswith("EXAM-ST") and len(data.password) >= 6:
+    if (data.uid.startswith("EXAM-ST") or data.uid.startswith("COG-ST")) and len(data.password) >= 6:
         return {
             "token": "mock-jwt-token-string",
             "studentUid": data.uid,

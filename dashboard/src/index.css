@@ -1,3 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --primary: #0B1F3B;
+  --secondary: #2563EB;
+  --accent: #14B8A6;
+  --neutral-dark: #64748B;
+  --neutral-light: #F8FAFC;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--neutral-light);
+  color: var(--primary);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--neutral-light);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-dark);
+}
+
+/* Animations */
+@keyframes pulse-teal {
+  0%, 100% { transform: scale(1); opacity: 0.15; }
+  50% { transform: scale(1.5); opacity: 0.05; }
+}
+
+.animate-pulse-teal {
+  animation: pulse-teal 4s ease-in-out infinite;
+}
+
+/* Auth Backdrop Rings */
+.ring-overlay {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+}
