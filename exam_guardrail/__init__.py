@@ -18,5 +18,8 @@
 from exam_guardrail.config import GuardrailConfig
 from exam_guardrail.core import init_guardrail
 
+__version__ = "1.0.0"
+__all__ = ["init_guardrail", "GuardrailConfig", "__version__"]
+
 __all__ = ["init_guardrail", "GuardrailConfig"]
 __version__ = "1.0.0"

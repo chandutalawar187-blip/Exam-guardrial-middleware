@@ -47,19 +47,21 @@ def init_guardrail(app: FastAPI, config: GuardrailConfig = None):
     )
 
     # Mount all middleware routes
-    app.include_router(auth.router)
     app.include_router(events.router)
     app.include_router(sessions.router)
-    app.include_router(submissions.router)
-    app.include_router(students.router)
-    app.include_router(questions.router)
-    app.include_router(exams.router)
-    app.include_router(reports.router)
+
+    if not config.monitoring_only:
+        app.include_router(auth.router)
+        app.include_router(submissions.router)
+        app.include_router(students.router)
+        app.include_router(questions.router)
+        app.include_router(exams.router)
+        app.include_router(reports.router)
 
     # Health endpoint
     @app.get('/health')
     async def guardrail_health():
         return {'status': 'ok', 'middleware': 'exam_guardrail', 'version': '1.0.0'}
 
-    print("[ExamGuardrail] Middleware initialized — all proctoring routes mounted.")
+    print(f"[ExamGuardrail] Middleware initialized — {'monitoring-only' if config.monitoring_only else 'full'} mode.")
     return app

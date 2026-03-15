@@ -31,6 +31,9 @@ class GuardrailConfig(BaseSettings):
     # CORS
     cors_origins: list = ["*"]
 
+    # Monitoring-only mode — skips database routes, only uses events + sessions
+    monitoring_only: bool = False
+
     class Config:
         env_file = ".env"
         extra = "ignore"
