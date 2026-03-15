@@ -10,6 +10,7 @@ services:
     env_file: ./backend/.env
     volumes:
       - ./backend:/app
+      - ./exam_guardrail:/app/exam_guardrail
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
@@ -24,6 +25,7 @@ services:
     env_file: ./dashboard/.env
     volumes:
       - ./dashboard:/app
+      - ./exam-guardrail-sdk:/exam-guardrail-sdk
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
     depends_on:

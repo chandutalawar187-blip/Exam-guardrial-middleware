@@ -1,28 +1,17 @@
+import sys
+import os
+# Add project root and backend root to path so exam_guardrail package is importable
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+_project_root = os.path.abspath(os.path.join(_backend_dir, '..'))
+for p in [_backend_dir, _project_root]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.routers import events, sessions, reports, auth, students, questions, admin, exams, submissions
+from exam_guardrail import init_guardrail, GuardrailConfig
 
 app = FastAPI(title='ExamGuardrail', version='2.0.0')
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=['*'],
-    allow_credentials=False,
-    allow_methods=['*'],
-    allow_headers=['*']
-)
-
-app.include_router(auth.router)
-app.include_router(sessions.router)
-app.include_router(events.router)
-app.include_router(reports.router)
-app.include_router(students.router)
-app.include_router(questions.router)
-app.include_router(admin.router)
-app.include_router(exams.router)
-app.include_router(submissions.router)
-
-
-@app.get('/health')
-async def health():
-    return {'status': 'ok', 'version': '2.0.0'}
+# Load config from .env and initialize the middleware
+config = GuardrailConfig()
+init_guardrail(app, config)

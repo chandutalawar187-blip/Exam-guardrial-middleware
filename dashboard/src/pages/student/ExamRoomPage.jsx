@@ -1,8 +1,9 @@
 // dashboard/src/pages/student/ExamRoomPage.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../config';
-import ProctoringMonitor from '../../components/ProctoringMonitor';
+import useGuardrail from '@guardrail-sdk/useGuardrail';
+import ProctoringOverlay from '@guardrail-sdk/ProctoringOverlay';
 
 export default function ExamRoomPage() {
   const navigate = useNavigate();
@@ -18,126 +19,37 @@ export default function ExamRoomPage() {
     return 3600; // fallback 60 min
   };
   const [timer, setTimer] = useState(getInitialTimer);
-  const [violations, setViolations] = useState(0);
   const [showWarn, setShowWarn] = useState(false);
   const [questions, setQuestions] = useState([]);
-  const [mediaState, setMediaState] = useState('pending'); // pending | requesting | granted | denied | unavailable
-  const [mediaStream, setMediaStream] = useState(null);
-  const [hasMedia, setHasMedia] = useState(false);
-  const mediaCheckedRef = useRef(false);
 
   const studentUid = localStorage.getItem('student_uid') || 'COG-ST-A1B2C3';
   const examTitle = localStorage.getItem('exam_name') || 'Data Structures Advanced';
   const sessionId = new URLSearchParams(window.location.search).get('sessionId') || localStorage.getItem('session_id');
 
-  // ── REPORT VIOLATION TO BACKEND ────────────────────────────
-  const reportViolation = useCallback((eventType, severity = 'HIGH') => {
-    setViolations(v => {
-      const newCount = v + 1;
-      if (newCount === 3) setShowWarn(true);
-      return newCount;
-    });
-    api.post('/api/events', {
-      session_id: sessionId,
-      event_type: eventType,
-      severity: severity,
-      layer: 'L1',
-      metadata: { source: 'exam_page', student_uid: studentUid }
-    }).catch(err => console.error('[Violation] Failed to report:', err));
-  }, [sessionId, studentUid]);
+  // ── GUARDRAIL SDK (replaces inline violation detection + media handling) ──
+  const {
+    violations, mediaState, faceStatus, audioLevel,
+    startMonitoring, requestMedia, startProctoring, stop, getVideoStream
+  } = useGuardrail({
+    apiBase: '/api',
+    sessionId,
+    studentUid,
+    autoStart: false
+  });
 
-  // ── CAMERA & MICROPHONE PERMISSION ─────────────────────────
-  useEffect(() => {
-    if (mediaCheckedRef.current) return;
-    mediaCheckedRef.current = true;
-
-    const requestMedia = async () => {
-      setMediaState('requesting');
-      try {
-        // Check if devices exist first
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const hasCam = devices.some(d => d.kind === 'videoinput');
-        const hasMic = devices.some(d => d.kind === 'audioinput');
-
-        if (!hasCam && !hasMic) {
-          // No camera or mic — fallback to normal proctoring
-          setMediaState('unavailable');
-          setHasMedia(false);
-          return;
-        }
-
-        const constraints = {};
-        if (hasCam) constraints.video = { width: 320, height: 240, facingMode: 'user' };
-        if (hasMic) constraints.audio = { echoCancellation: true, noiseSuppression: true };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        setMediaStream(stream);
-        setHasMedia(true);
-        setMediaState('granted');
-      } catch (err) {
-        console.warn('[Proctoring] Media access denied or error:', err.message);
-        // Check if it's a "not found" error vs denial
-        if (err.name === 'NotFoundError' || err.name === 'NotAllowedError' && err.message.includes('Requested device not found')) {
-          setMediaState('unavailable');
-          setHasMedia(false);
-        } else {
-          // User denied permission
-          setMediaState('denied');
-          setHasMedia(false);
-        }
-      }
-    };
-    requestMedia();
-  }, []);
-
-  // Clean up media stream on unmount
-  useEffect(() => {
-    return () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
-      }
-    };
-  }, [mediaStream]);
-
-  // ── BUILT-IN VIOLATION DETECTION (works without extension) ─
+  // Start monitoring + proctoring once init is true
   useEffect(() => {
     if (!init) return;
+    startMonitoring();
+    requestMedia().then(ok => {
+      if (ok) startProctoring();
+    });
+  }, [init]);
 
-    const onVisibility = () => {
-      if (document.hidden) reportViolation('TAB_HIDDEN', 'HIGH');
-    };
-    const onBlur = () => reportViolation('WINDOW_FOCUS_LOST', 'HIGH');
-    const onContext = (e) => { e.preventDefault(); reportViolation('RIGHT_CLICK', 'MEDIUM'); };
-    const onClipboard = (e) => { e.preventDefault(); reportViolation('CLIPBOARD_ATTEMPT', 'HIGH'); };
-    const onKeydown = (e) => {
-      const isDevTools = e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'u');
-      if (isDevTools) { e.preventDefault(); reportViolation('DEVTOOLS_ATTEMPT', 'CRITICAL'); }
-    };
-
-    const initialWidth = window.innerWidth;
-    const initialHeight = window.innerHeight;
-    const onResize = () => {
-      const dw = Math.abs(window.innerWidth - initialWidth);
-      const dh = Math.abs(window.innerHeight - initialHeight);
-      if (dw > 50 || dh > 50) reportViolation('SCREEN_RESIZE', 'HIGH');
-    };
-
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
-    document.addEventListener('contextmenu', onContext);
-    ['copy', 'cut', 'paste'].forEach(ev => document.addEventListener(ev, onClipboard));
-    document.addEventListener('keydown', onKeydown);
-    window.addEventListener('resize', onResize);
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
-      document.removeEventListener('contextmenu', onContext);
-      ['copy', 'cut', 'paste'].forEach(ev => document.removeEventListener(ev, onClipboard));
-      document.removeEventListener('keydown', onKeydown);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [init, reportViolation]);
+  // Show warning at 3 violations
+  useEffect(() => {
+    if (violations === 3) setShowWarn(true);
+  }, [violations]);
 
   // ── FETCH QUESTIONS ─────────────────────────────────────────
   useEffect(() => {
@@ -200,10 +112,8 @@ export default function ExamRoomPage() {
   }, [timer, init]);
 
   const handleSubmit = async () => {
-    // Stop camera/mic streams
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(t => t.stop());
-    }
+    // Stop SDK (cleans up media streams, listeners, proctoring)
+    stop();
 
     try {
       if (typeof window.chrome !== 'undefined' && window.chrome.runtime && typeof window.chrome.runtime.id === 'string') {
@@ -236,15 +146,8 @@ export default function ExamRoomPage() {
   // ── PERMISSION DENIED GATE — student MUST allow camera/mic ──
   if (mediaState === 'denied') {
     const retryPermission = async () => {
-      setMediaState('requesting');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setMediaStream(stream);
-        setHasMedia(true);
-        setMediaState('granted');
-      } catch {
-        setMediaState('denied');
-      }
+      const ok = await requestMedia();
+      if (ok) startProctoring();
     };
     return (
       <div className="min-h-screen bg-[#001D39] flex flex-col items-center justify-center p-8">
@@ -270,7 +173,7 @@ export default function ExamRoomPage() {
     );
   }
 
-  if (!init || mediaState === 'pending' || mediaState === 'requesting') {
+  if (!init || mediaState === 'idle' || mediaState === 'requesting') {
     return (
       <div className="min-h-screen bg-[#001D39] flex flex-col items-center justify-center p-8">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
@@ -333,7 +236,7 @@ export default function ExamRoomPage() {
               <div className={`w-2 h-2 rounded-full ${violations > 2 ? 'bg-white' : 'bg-[#4E8EA2] animate-pulse'}`}></div>
               <span className="font-body text-[12px] font-black uppercase tracking-widest">{violations} Breaches</span>
             </div>
-            {hasMedia && (
+            {mediaState === 'granted' && (
               <div className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
                 <span className="font-body text-[10px] font-black uppercase tracking-widest text-[#4E8EA2]">CAM + MIC</span>
@@ -411,12 +314,12 @@ export default function ExamRoomPage() {
         </main>
       </div>
 
-      {/* ── PROCTORING MONITOR (Camera + Mic overlay) ── */}
-      <ProctoringMonitor
-        onViolation={reportViolation}
-        enabled={init && hasMedia}
-        hasMedia={hasMedia}
-        stream={mediaStream}
+      {/* ── PROCTORING OVERLAY (Camera + Mic via SDK) ── */}
+      <ProctoringOverlay
+        videoStream={getVideoStream()}
+        faceStatus={faceStatus}
+        audioLevel={audioLevel}
+        position="bottom-right"
       />
 
       {/* ── VIOLATION WARNING MODAL ── */}
