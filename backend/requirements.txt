@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-websockets
-python-dotenv
-supabase
-psutil
-scikit-learn
-httpx
-pydantic-settings
