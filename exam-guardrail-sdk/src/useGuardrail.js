@@ -18,13 +18,15 @@ export function useGuardrail({
   const [mediaState, setMediaState] = useState('idle');
   const [faceStatus, setFaceStatus] = useState('ok');
   const [audioLevel, setAudioLevel] = useState(0);
+  const [agentStatus, setAgentStatus] = useState('unknown');
   const pollRef = useRef(null);
 
   useEffect(() => {
     const sdk = new GuardrailSDK({
       apiBase,
       onViolation: (_type, _sev, count) => setViolations(count),
-      onMediaStateChange: (state) => setMediaState(state)
+      onMediaStateChange: (state) => setMediaState(state),
+      onAgentAlert: (data) => setAgentStatus(data.status || 'connected')
     });
     sdkRef.current = sdk;
 
@@ -32,6 +34,7 @@ export function useGuardrail({
 
     if (autoStart && sessionId) {
       sdk.startMonitoring();
+      sdk.startAgentPolling();
       sdk.requestMedia().then(ok => {
         if (ok) sdk.startProctoring();
       });
@@ -41,6 +44,7 @@ export function useGuardrail({
       if (sdkRef.current) {
         setFaceStatus(sdkRef.current.getFaceStatus());
         setAudioLevel(sdkRef.current.getAudioLevel());
+        setAgentStatus(sdkRef.current.getAgentStatus());
       }
     }, 500);
 
@@ -53,6 +57,8 @@ export function useGuardrail({
   const startMonitoring = useCallback(() => { sdkRef.current?.startMonitoring(); }, []);
   const requestMedia = useCallback(() => sdkRef.current?.requestMedia(), []);
   const startProctoring = useCallback(() => { sdkRef.current?.startProctoring(); }, []);
+  const startAgentPolling = useCallback(() => { sdkRef.current?.startAgentPolling(); }, []);
+  const triggerAgentScan = useCallback(() => sdkRef.current?.triggerAgentScan(), []);
   const stop = useCallback(() => { sdkRef.current?.stop(); }, []);
   const getVideoStream = useCallback(() => sdkRef.current?.getVideoStream(), []);
   const getViolationLog = useCallback(() => sdkRef.current?.getViolationLog() || [], []);
@@ -63,9 +69,12 @@ export function useGuardrail({
     mediaState,
     faceStatus,
     audioLevel,
+    agentStatus,
     startMonitoring,
     requestMedia,
     startProctoring,
+    startAgentPolling,
+    triggerAgentScan,
     stop,
     getVideoStream,
     getViolationLog

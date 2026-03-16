@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../config';
-import useGuardrail from '@guardrail-sdk/useGuardrail';
-import ProctoringOverlay from '@guardrail-sdk/ProctoringOverlay';
+import { useGuardrail } from '@guardrail-sdk/useGuardrail';
+import { ProctoringOverlay } from '@guardrail-sdk/ProctoringOverlay';
 
 export default function ExamRoomPage() {
   const navigate = useNavigate();

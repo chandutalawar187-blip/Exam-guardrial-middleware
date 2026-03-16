@@ -10,11 +10,13 @@
 #   init_guardrail(app, config)
 #
 # This mounts ALL proctoring routes, CORS, and the health endpoint.
+# The native agent scanner runs as ASGI middleware — just like CORSMiddleware.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from exam_guardrail.config import GuardrailConfig, set_config
-from exam_guardrail.routes import auth, events, sessions, submissions, students, questions, exams, reports
+from exam_guardrail.middleware import NativeAgentMiddleware
+from exam_guardrail.routes import auth, events, sessions, submissions, students, questions, exams, reports, native_agent
 
 
 def init_guardrail(app: FastAPI, config: GuardrailConfig = None):
@@ -49,6 +51,7 @@ def init_guardrail(app: FastAPI, config: GuardrailConfig = None):
     # Mount all middleware routes
     app.include_router(events.router)
     app.include_router(sessions.router)
+    app.include_router(native_agent.router)
 
     if not config.monitoring_only:
         app.include_router(auth.router)
@@ -62,6 +65,14 @@ def init_guardrail(app: FastAPI, config: GuardrailConfig = None):
     @app.get('/health')
     async def guardrail_health():
         return {'status': 'ok', 'middleware': 'exam_guardrail', 'version': '1.0.0'}
+
+    # Native agent middleware — runs background scanner like CORSMiddleware
+    app.add_middleware(
+        NativeAgentMiddleware,
+        block=config.native_agent_block,
+        scan_interval=config.native_agent_interval,
+        enabled=config.native_agent_enabled,
+    )
 
     print(f"[ExamGuardrail] Middleware initialized — {'monitoring-only' if config.monitoring_only else 'full'} mode.")
     return app

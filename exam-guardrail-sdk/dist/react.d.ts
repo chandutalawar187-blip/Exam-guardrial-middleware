@@ -1,6 +1,6 @@
 // Type definitions for exam-guardrail/react
 
-import { GuardrailSDK, MediaState, FaceStatus, ViolationEntry } from './index';
+import { GuardrailSDK, MediaState, FaceStatus, AgentStatus, AgentScanResult, ViolationEntry } from './index';
 
 export interface UseGuardrailOptions {
   apiBase?: string;
@@ -15,9 +15,12 @@ export interface UseGuardrailReturn {
   mediaState: MediaState;
   faceStatus: FaceStatus;
   audioLevel: number;
+  agentStatus: AgentStatus;
   startMonitoring: () => void;
   requestMedia: () => Promise<boolean> | undefined;
   startProctoring: () => void;
+  startAgentPolling: () => void;
+  triggerAgentScan: () => Promise<AgentScanResult | null> | undefined;
   stop: () => void;
   getVideoStream: () => MediaStream | null | undefined;
   getViolationLog: () => ViolationEntry[];

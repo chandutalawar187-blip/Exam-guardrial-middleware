@@ -17,9 +17,17 @@
 
 from exam_guardrail.config import GuardrailConfig
 from exam_guardrail.core import init_guardrail
+from exam_guardrail.middleware import NativeAgentMiddleware
 
 __version__ = "1.0.0"
-__all__ = ["init_guardrail", "GuardrailConfig", "__version__"]
+__all__ = ["init_guardrail", "GuardrailConfig", "NativeAgentMiddleware", "NativeAgent", "__version__"]
+
+# Lazy import for optional native agent
+def __getattr__(name):
+    if name == 'NativeAgent':
+        from exam_guardrail.services.scanners.agent_runner import NativeAgent
+        return NativeAgent
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
 
 __all__ = ["init_guardrail", "GuardrailConfig"]
 __version__ = "1.0.0"

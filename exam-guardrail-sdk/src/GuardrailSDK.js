@@ -2,7 +2,7 @@
 // Core SDK class — works with any framework (React, Vue, Angular, Vanilla JS)
 
 export class GuardrailSDK {
-  constructor({ apiBase = '/api', onViolation = null, onMediaStateChange = null } = {}) {
+  constructor({ apiBase = '/api', onViolation = null, onMediaStateChange = null, onAgentAlert = null } = {}) {
     this.apiBase = apiBase;
     this.sessionId = null;
     this.userId = null;
@@ -10,10 +10,13 @@ export class GuardrailSDK {
     this.violationLog = [];
     this.onViolation = onViolation;
     this.onMediaStateChange = onMediaStateChange;
+    this.onAgentAlert = onAgentAlert;
     this.mediaStream = null;
     this.mediaState = 'idle';
+    this.agentStatus = 'unknown'; // 'connected' | 'disconnected' | 'unknown'
     this._cleanupFns = [];
     this._proctoringTimer = null;
+    this._agentPollTimer = null;
     this._videoEl = null;
     this._canvasEl = null;
     this._audioCtx = null;
@@ -273,6 +276,62 @@ export class GuardrailSDK {
   getFaceStatus() { return this._analyzeFace(); }
 
   getViolationLog() { return [...this.violationLog]; }
+
+  // ── NATIVE AGENT STATUS ────────────────────────────────────
+  // Polls the backend to check if a native agent is running for this session.
+  // The native agent detects hidden AI tools + screen sharing apps on the OS.
+
+  startAgentPolling(intervalMs = 5000) {
+    if (!this.sessionId) return;
+    const self = this;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`${self.apiBase}/native-agent/status/${self.sessionId}`);
+        const data = await res.json();
+        self.agentStatus = data.status || 'disconnected';
+
+        if (self.onAgentAlert && data.stats) {
+          const { findings, blocked } = data.stats;
+          if (findings > 0 || blocked > 0) {
+            self.onAgentAlert(data);
+          }
+        }
+      } catch {
+        self.agentStatus = 'disconnected';
+      }
+    };
+
+    poll();
+    this._agentPollTimer = setInterval(poll, intervalMs);
+    this._cleanupFns.push(() => clearInterval(self._agentPollTimer));
+  }
+
+  getAgentStatus() { return this.agentStatus; }
+
+  async triggerAgentScan() {
+    if (!this.sessionId) return null;
+    try {
+      const res = await fetch(`${this.apiBase}/native-agent/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: this.sessionId, block: true })
+      });
+      return await res.json();
+    } catch (err) {
+      console.warn('[exam-guardrail] Agent scan failed:', err.message);
+      return null;
+    }
+  }
+
+  async getBlockedProcessList() {
+    try {
+      const res = await fetch(`${this.apiBase}/native-agent/blocked-list`);
+      return await res.json();
+    } catch {
+      return { count: 0, processes: [] };
+    }
+  }
 
   stop() {
     this._cleanupFns.forEach(fn => fn());

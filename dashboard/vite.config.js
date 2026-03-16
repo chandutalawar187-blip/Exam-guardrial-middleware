@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@guardrail-sdk': path.resolve(__dirname, '../exam-guardrail-sdk')
+      '@guardrail-sdk': path.resolve(__dirname, '../exam-guardrail-sdk/src')
     }
   },
   server: {

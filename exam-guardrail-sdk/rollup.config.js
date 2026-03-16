@@ -1,7 +1,15 @@
 import terser from '@rollup/plugin-terser';
+import babel from '@rollup/plugin-babel';
 
 const shared = {
-  plugins: [terser()],
+  plugins: [
+    babel({
+      babelHelpers: 'bundled',
+      presets: ['@babel/preset-react'],
+      extensions: ['.js', '.jsx'],
+    }),
+    terser(),
+  ],
   external: ['react', 'react-dom'],
 };
 

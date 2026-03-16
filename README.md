@@ -106,9 +106,12 @@ function ExamPage({ sessionId, userId }) {
     mediaState,
     faceStatus,
     audioLevel,
+    agentStatus,
     startMonitoring,
     requestMedia,
     startProctoring,
+    startAgentPolling,
+    triggerAgentScan,
     getVideoStream,
     getViolationLog,
     stop
@@ -117,6 +120,7 @@ function ExamPage({ sessionId, userId }) {
   return (
     <div>
       <p>Violations: {violations}</p>
+      <p>Native Agent: {agentStatus}</p>
       <ProctoringOverlay
         videoStream={getVideoStream()}
         faceStatus={faceStatus}
@@ -142,6 +146,77 @@ const log = sdk.getViolationLog();
 
 ---
 
+## Native Agent — AI & Screen Share Blocking
+
+The native agent runs on the student's machine and actively detects + blocks prohibited software during exams.
+
+### What It Catches
+
+| Category | Examples | Action |
+|----------|----------|--------|
+| **AI Overlay Apps** | Cluely, ParakeetAI, LockedIn, Interview Coder, Cursor, Windsurf | **Terminated** |
+| **Remote Access** | AnyDesk, TeamViewer, VNC, Chrome Remote Desktop, Parsec, RustDesk | **Terminated** |
+| **Screen Sharing** | Zoom, Discord, Teams, Slack, Skype, Webex, GoToMeeting | **Terminated** |
+| **Screen Recorders** | OBS, Streamlabs, Camtasia, Bandicam, Loom, ShareX | **Terminated** |
+| **Hidden Windows** | WDA_EXCLUDEFROMCAPTURE (Windows), kCGWindowSharingNone (macOS) | **Reported** |
+| **AI API Connections** | OpenAI, Anthropic, Groq, Mistral, Cohere, DeepSeek, Perplexity | **Reported** |
+| **AI in CLI** | Command-line args containing openai, chatgpt, copilot, llama, etc. | **Reported** |
+
+### Start the Agent
+
+```bash
+# Run alongside the exam (requires psutil)
+python -m exam_guardrail.services.scanners \
+  --session-id "session-123" \
+  --api-base "http://localhost:8000/api" \
+  --interval 3
+
+# Detect only (don't terminate processes)
+python -m exam_guardrail.services.scanners \
+  --session-id "session-123" \
+  --no-block
+```
+
+### From Python Code
+
+```python
+from exam_guardrail import NativeAgent
+
+agent = NativeAgent(
+    session_id='session-123',
+    api_base='http://localhost:8000/api',
+    scan_interval=3,
+    block=True,       # terminate detected threats
+)
+await agent.start()   # runs forever until agent.stop()
+
+# Or run a single scan
+results = await agent.run_single_scan()
+```
+
+### From the Frontend (SDK)
+
+```js
+// Check if native agent is running
+sdk.startAgentPolling();
+console.log(sdk.agentStatus); // 'connected' | 'disconnected'
+
+// Trigger an on-demand scan via the backend
+const result = await sdk.triggerAgentScan();
+// { findings_count: 2, blocked_count: 1, findings: [...] }
+```
+
+### API Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/native-agent/heartbeat` | Agent sends heartbeat |
+| GET | `/api/native-agent/status/{session_id}` | Check if agent is alive |
+| POST | `/api/native-agent/scan` | Trigger on-demand scan |
+| GET | `/api/native-agent/blocked-list` | List all blocked process names |
+
+---
+
 ## What It Detects
 
 | Event | Severity | Trigger |
@@ -154,6 +229,19 @@ const log = sdk.getViolationLog();
 | `SCREEN_RESIZE` | HIGH | Window resized beyond threshold |
 | `FACE_NOT_DETECTED` | HIGH | No face visible in camera |
 | `GAZE_AWAY` | MEDIUM | Student looking away from screen |
+| `LOUD_AUDIO_DETECTED` | MEDIUM | Sustained loud audio from microphone |
+| `AI_AGENT_DETECTED` | CRITICAL | Known AI overlay app running (L4) |
+| `AI_AGENT_BLOCKED` | CRITICAL | AI overlay terminated by native agent |
+| `REMOTE_ACCESS_DETECTED` | CRITICAL | Remote desktop tool detected (L4) |
+| `REMOTE_ACCESS_BLOCKED` | CRITICAL | Remote access tool terminated |
+| `SCREEN_SHARE_DETECTED` | CRITICAL | Screen sharing app detected (L4) |
+| `SCREEN_SHARE_BLOCKED` | CRITICAL | Screen sharing app terminated |
+| `SCREEN_RECORDER_DETECTED` | CRITICAL | Screen recording app detected (L4) |
+| `SCREEN_RECORDER_BLOCKED` | CRITICAL | Screen recorder terminated |
+| `HIDDEN_WINDOW_WDA` | CRITICAL | Window hiding from screen capture (L2) |
+| `AI_API_CONNECTION` | CRITICAL | Outbound connection to AI API (L3) |
+| `AI_CMDLINE_DETECTED` | HIGH | AI-related command-line arguments (L4) |
+| `SUSPICIOUS_ELECTRON_APP` | HIGH | Unknown Electron app (possible AI overlay) |
 | `LOUD_AUDIO_DETECTED` | MEDIUM | Sustained loud audio from microphone |
 
 ---
@@ -195,6 +283,10 @@ Mounted automatically by `init_guardrail()`:
 | POST | `/api/auth/admin/login` | Admin login |
 | GET | `/api/dashboard/overview` | All sessions overview |
 | GET | `/api/exams` | List exams |
+| POST | `/api/native-agent/heartbeat` | Native agent heartbeat |
+| GET | `/api/native-agent/status/{session_id}` | Check agent connection |
+| POST | `/api/native-agent/scan` | Trigger on-demand scan |
+| GET | `/api/native-agent/blocked-list` | List blocked process names |
 | GET | `/health` | Health check |
 
 ---
@@ -213,10 +305,16 @@ Exam-guardrial-middleware/
 │   ├── routes/                     8 route modules
 │   │   ├── auth.py, events.py, sessions.py, submissions.py
 │   │   ├── students.py, questions.py, exams.py, reports.py
+│   │   └── native_agent.py            Native agent heartbeat + scan API
 │   └── services/
 │       ├── __init__.py             Scoring + verdict logic
 │       ├── ai_agents.py            Claude AI integration
-│       └── excel_export.py         Excel report generation
+│       ├── excel_export.py         Excel report generation
+│       └── scanners/               Native agent scanner modules
+│           ├── ai_agent_detector.py    Detect AI overlay apps + hidden windows
+│           ├── screen_share_detector.py Detect screen share / remote access / recorders
+│           ├── process_blocker.py      Terminate prohibited processes
+│           └── agent_runner.py         Background loop (NativeAgent class)
 │
 ├── exam-guardrail-sdk/           ← npm package (JavaScript frontend SDK)
 │   ├── package.json

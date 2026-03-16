@@ -34,6 +34,11 @@ class GuardrailConfig(BaseSettings):
     # Monitoring-only mode — skips database routes, only uses events + sessions
     monitoring_only: bool = False
 
+    # Native agent — auto-start background scanner when server starts
+    native_agent_enabled: bool = True
+    native_agent_block: bool = True
+    native_agent_interval: int = 3
+
     class Config:
         env_file = ".env"
         extra = "ignore"
