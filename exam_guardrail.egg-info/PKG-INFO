@@ -1,3 +1,42 @@
+Metadata-Version: 2.4
+Name: exam-guardrail
+Version: 1.0.1
+Summary: Drop-in exam proctoring middleware for FastAPI — violation detection, camera/mic proctoring, credibility scoring
+Author: CogniVigil
+License: MIT
+Project-URL: Homepage, https://github.com/Ghost-Busters-1984/Exam-guardrial-middleware
+Project-URL: Repository, https://github.com/Ghost-Busters-1984/Exam-guardrial-middleware
+Keywords: exam,proctoring,middleware,fastapi,anti-cheating,guardrail,monitoring
+Classifier: Development Status :: 4 - Beta
+Classifier: Framework :: FastAPI
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Education
+Classifier: Topic :: Security
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi>=0.100.0
+Requires-Dist: uvicorn[standard]>=0.20.0
+Requires-Dist: websockets>=11.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: supabase>=2.0.0
+Requires-Dist: anthropic>=0.20.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: openpyxl>=3.1.0
+Requires-Dist: psutil>=5.9.0
+Requires-Dist: httpx>=0.24.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: httpx; extra == "dev"
+Dynamic: license-file
+
 # exam-guardrail 🛡️
 
 **Drop-in exam proctoring backend by [CogniVigil](https://github.com/chandutalawar187-blip/Exam-guardrial-middleware) — detect and terminate AI cheating tools, remote access apps, screen recorders, and cheat browser extensions in real time.**

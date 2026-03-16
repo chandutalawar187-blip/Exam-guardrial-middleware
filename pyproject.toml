@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "exam-guardrail"
-version = "1.0.0"
+version = "1.0.1"
 description = "Drop-in exam proctoring middleware for FastAPI — violation detection, camera/mic proctoring, credibility scoring"
 readme = "README.md"
 license = {text = "MIT"}
@@ -44,8 +44,8 @@ dependencies = [
 dev = ["pytest", "httpx"]
 
 [project.urls]
-Homepage = "https://github.com/chandutalawar187-blip/Exam-guardrial-middleware"
-Repository = "https://github.com/chandutalawar187-blip/Exam-guardrial-middleware"
+Homepage = "https://github.com/Ghost-Busters-1984/Exam-guardrial-middleware"
+Repository = "https://github.com/Ghost-Busters-1984/Exam-guardrial-middleware"
 
 [tool.setuptools.packages.find]
 include = ["exam_guardrail*"]

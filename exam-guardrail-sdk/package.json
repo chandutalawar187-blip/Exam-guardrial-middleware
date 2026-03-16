@@ -1,6 +1,6 @@
 {
   "name": "exam-guardrail",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Drop-in exam proctoring middleware — violation detection, camera/mic monitoring, credibility scoring for any web-based exam platform",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
