@@ -413,6 +413,45 @@ export default {
 
 ---
 
+## Deployment
+
+### Self-Hosted (Docker)
+
+```bash
+docker-compose up --build
+# Starts: MongoDB + Backend + Frontend on ports 8000 & 5173
+```
+
+### Vercel (Cloud)
+
+Deploy frontend + backend serverless to Vercel in minutes:
+
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+**See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for full guide:**
+- Frontend auto-deployed to Vercel Edge
+- Backend as Python serverless functions
+- Set environment variables in Vercel dashboard
+- Auto-scales with usage
+
+### Other Platforms
+
+- **Railway**: `railway up` — simplest for Python/FastAPI
+- **Render**: Full managed database + backend support
+- **Fly.io**: Docker-native, good pricing
+- **AWS**: ECS, Lambda, RDS (most complex)
+
+For production, ensure:
+- ✅ Environment variables set (SUPABASE_URL, SUPABASE_KEY, etc.)
+- ✅ HTTPS enabled (automatic on Vercel, Railway, Render)
+- ✅ Admin credentials changed from defaults
+- ✅ CORS origins restricted to your domain(s)
+
+---
+
 ## Platform Support
 
 | Platform | Process Scanning | Network Monitor | Extension Scanner | Process Blocking | Hidden Window Detection |
